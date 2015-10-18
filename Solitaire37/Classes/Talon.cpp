@@ -13,6 +13,8 @@ const auto SHOW_CARD_POSITION1=Vec2(170,1050);//表示カードの位置
 const auto SHOW_CARD_POSITION2=Vec2(200,1050);
 const auto SHOW_CARD_POSITION3=Vec2(230,1050);
 
+const int CARD_WIDTH=100;//カードの幅
+
 Talon::Talon()
 :_pullCount(3)
 ,_dragCardPosition(Vec2(0,0))
@@ -83,7 +85,12 @@ void Talon::moveTalonToPull()
         }else{
             card->setLocalZOrder(_pullCards.back()->getLocalZOrder()+1);
         }
-        card->setPosition(_showCardsPosition.at(i));
+        //card->setPosition(_showCardsPosition.at(i));
+        ////
+        card->setPosition(TALON_CARD_POSITION+Vec2(CARD_WIDTH,0));
+        card->runAction(MoveTo::create(0.2,_showCardsPosition.at(i)));
+        ////
+        
         
         _pullCards.pushBack(card);
         _talonCards.popBack();
@@ -128,6 +135,9 @@ bool Talon::nextShowCards()
 
 bool Talon::touchTalonCard(const cocos2d::Vec2 &position)
 {
+    ////
+    stopCardsActions();
+    ////
     if(checkTouchTalon(position)){
         return nextShowCards();
     }
@@ -137,9 +147,13 @@ bool Talon::touchTalonCard(const cocos2d::Vec2 &position)
 
 Vector<Card*> Talon::dragCards(const cocos2d::Vec2 &position)
 {
+    ////
+    stopCardsActions();
+    ////
     Vector<Card*> cards;
     if(!_pullCards.empty()){//置き札がある
         auto card=_pullCards.back();
+        
         if(card->getBoundingBox().containsPoint(position)){
             cards.pushBack(card);
             _dragCardPosition=card->getPosition();
@@ -179,4 +193,33 @@ void Talon::createTalonCardSprite()
     sprite->setPosition(TALON_CARD_POSITION);
     this->addChild(sprite);
     setTalonCardSprite(sprite);
+}
+
+void Talon::stopCardsActions()
+{
+    if(!_pullCards.empty()){
+        if(_pullCards.back()->getNumberOfRunningActions()){//アクション中
+            int i=0;
+            auto index=_pullCards.size()-1;//表示カードの最後の添字
+            if(index==1){//カードが2枚
+                if(_pullCards.at(index-1)->getNumberOfRunningActions()){
+                    i=1;
+                }
+            }else if(index>=2){//カードが3枚以上
+                if(_pullCards.at(index-2)->getNumberOfRunningActions()){
+                    i=2;
+                }
+            }
+            
+            int j=0;
+            while(i>=0){//アクション中のカードを停止し、指定された位置に置く
+                auto card=_pullCards.at(index-i);
+                card->stopAllActions();
+                card->setPosition(_showCardsPosition.at(j));
+                
+                i--;
+                j++;
+            }
+        }
+    }
 }

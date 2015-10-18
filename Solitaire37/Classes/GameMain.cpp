@@ -12,6 +12,9 @@ const Rect TALON_AREA_RECT=Rect(0,970,310,160);//山札の領域
 const Rect HOME_CELL_AREA_RECT=Rect(310,970,420,160);//ホームセルの領域
 const Rect BOARD_CARD_AREA_RECT=Rect(0,0,720,970);//場札の領域
 
+const Vec2 HELP_SELECT=Vec2(220,80);//help_selectの位置
+const Vec2 HELP_SELECT_DIFF=Vec2(100,0);//help_selectの差分
+
 const Vec2 TALON_DIFF=Vec2(0,-60);//カードの重なり位置の差
 const Size CARD_SIZE=Size(100,150);
 
@@ -79,6 +82,16 @@ bool GameMain::init()
     auto listener=EventListenerTouchOneByOne::create();
     //ドラッグ開始
     listener->onTouchBegan=[this](Touch* touch,Event* event){
+        ////
+        if(!_moveCards.empty()){
+            if(_moveCards.front()->getNumberOfRunningActions()){//ダブルタッチアニメーション中
+                auto card=_moveCards.front();
+                card->stopAllActions();//アニメーションをキャンセル
+                this->dragTouchEnded(_homeCellLayer->getHomeCellTalonPosition(card->getCardType()));//CallFuncの処理を実行
+            }
+        }
+        ////
+        
         auto position=touch->getLocation();
         if(_gameState==GameState::TOUCH_WAITING){
             _moveCards.clear();
@@ -146,8 +159,19 @@ bool GameMain::init()
                     if(_touchTime<TOUCH_TIME_PERIOD){//ダブルタップ受付時間以内
                         this->unschedule(DRAG_SCHEDULE);
                         auto card=_moveCards.front();
-                        this->dragTouchEnded(_homeCellLayer->getHomeCellTalonPosition(card->getCardType()));
+                        //this->dragTouchEnded(_homeCellLayer->getHomeCellTalonPosition(card->getCardType()));
                         _doubleTouchFlag=false;
+                        
+                        ////
+                        //カードを移すホームセルの位置
+                        auto homeCellPosition=_homeCellLayer->getHomeCellTalonPosition(card->getCardType());
+                        //_moveLayerとGameMainレイヤーは基準座標が違うためconvertする
+                        card->runAction(Sequence::create(MoveTo::create(0.3,_moveLayer->convertToNodeSpace(homeCellPosition))
+                                                         ,CallFunc::create([this,homeCellPosition](){
+                            this->dragTouchEnded(homeCellPosition);
+                        })
+                                                         ,NULL));
+                        ////
                     }
                 }else{
                     if(_touchTime<TOUCH_TIME_PERIOD){//ダブルタップ受付時間以内
@@ -313,6 +337,7 @@ void GameMain::settingStart()
         this->scheduleUpdate();
     };
     
+    
     Director::getInstance()->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener,layer);
 }
 
@@ -477,6 +502,14 @@ void GameMain::createMenu()
                                              });
     restartButton->setPosition(Vec2(290,570));
     
+    //helpボタン
+    auto helpButton=MenuItemImage::create("button_help_off.png"
+                                          ,"button_help_on.png"
+                                          ,[this](Ref* pButton){
+                                              this->createHelp();
+                                          });
+    helpButton->setPosition(Vec2(320,1200));
+    
 #if !(CC_TARGET_PLATFORM == CC_PLATFORM_WP8) || (CC_TARGET_PLATFORM == CC_PLATFORM_WINRT)
     //アプリ終了ボタン
     auto apEndButton=MenuItemImage::create("button_off.png",
@@ -494,9 +527,9 @@ void GameMain::createMenu()
                                            });
     apEndButton->setPosition(Vec2(350,320));
     
-    auto menu=Menu::create(button,resetButton,restartButton,apEndButton,NULL);
+    auto menu=Menu::create(button,resetButton,restartButton,helpButton,apEndButton,NULL);
 #else
-    auto menu=Menu::create(button,resetButton,restartButton,NULL);
+    auto menu=Menu::create(button,resetButton,restartButton,helpButton,NULL);
 #endif
     menu->setPosition(Vec2::ZERO);
     layer->addChild(menu);
@@ -619,4 +652,76 @@ void GameMain::dragTouchEnded(const cocos2d::Vec2 &position)
     }
     
     _dragLayer->cancelCards(_moveCards);
+}
+
+void GameMain::createHelp()
+{
+    auto layer=LayerColor::create(Color4B::BLACK);
+    
+    auto winSize=Director::getInstance()->getWinSize();
+    
+    
+    Vector<Sprite*> helps;
+    Vector<Sprite*> buttons;
+    for(int i=1;i<=4;i++){
+        //ヘルプ作成
+        auto help=Sprite::create(StringUtils::format("help%d.png",i));
+        help->setPosition(winSize/2);
+        help->setVisible(false);
+        layer->addChild(help);
+        helps.pushBack(help);
+        
+        //ヘルプ選択ボタン作成
+        auto button=Sprite::create("button_help_select_off.png");
+        auto onButton=Sprite::create("button_help_select_on.png");
+        onButton->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+        onButton->setPosition(Vec2::ZERO);
+        onButton->setVisible(false);
+        button->addChild(onButton);
+        button->setPosition(HELP_SELECT+HELP_SELECT_DIFF*(i-1));
+        layer->addChild(button);
+        buttons.pushBack(button);
+    }
+    helps.front()->setVisible(true);
+    buttons.front()->getChildren().front()->setVisible(true);
+    
+    auto listener=EventListenerTouchOneByOne::create();
+    listener->onTouchBegan=[](Touch* touch,Event* event){return true;};
+    listener->onTouchEnded=[helps,buttons](Touch* touch,Event* event){
+        auto position=touch->getLocation();
+        
+        for(int i=0;i<4;i++){
+            auto button=buttons.at(i);
+            //どのボタンがタッチされたか調べる
+            if(button->getBoundingBox().containsPoint(position)){
+                //タッチされたボタンに対応するヘルプを表示
+                helps.at(i)->setVisible(true);
+                button->getChildren().front()->setVisible(true);
+                
+                //他のヘルプは消す
+                for(int j=0;j<4;j++){
+                    if(j==i){continue;}//表示するヘルプは飛ばす
+                    helps.at(j)->setVisible(false);
+                    buttons.at(j)->getChildren().front()->setVisible(false);
+                }
+                
+                break;
+            }
+        }
+    };
+    listener->setSwallowTouches(true);
+    Director::getInstance()->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener,layer);
+    
+    auto close=MenuItemImage::create("button_close_off.png"
+                                     ,"button_close_on.png"
+                                     ,[layer](Ref* pButton){
+                                         layer->removeFromParent();
+                                     });
+    close->setPosition(Vec2(320,1200));
+    
+    auto menu=Menu::create(close,NULL);
+    menu->setPosition(Vec2::ZERO);
+    layer->addChild(menu);
+    
+    this->addChild(layer,convertLayerZPositionIntoInt(LayerZPosition::HELP));
 }

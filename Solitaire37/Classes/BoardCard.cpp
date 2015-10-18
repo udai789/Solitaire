@@ -146,6 +146,13 @@ Vector<Card*> BoardCard::BoardTalon::dragCards(const cocos2d::Vec2 &position)
     Vector<Card*> cards;
     auto localPosition=convertToNodeSpace(position);//このレイヤーの座標系に変換
     
+    if(_openCards.front()->getNumberOfRunningActions()){//actionが設定されている
+        auto card=_openCards.front();
+        card->stopAllActions();//アクションを解除
+        card->removeAllChildren();//重ねてあるカードを削除
+        card->setRotationSkewY(0);//カードの向きを整える
+    }
+    
     if(!_openCards.empty()){
         int count=static_cast<int>(_openCards.size());//表のカードの枚数
         int index=-1;//タッチされたカードの位置
@@ -221,7 +228,16 @@ bool BoardCard::BoardTalon::turnCard()
             _openCards.pushBack(card);
             _closeCards.popBack();
             
-            card->removeAllChildren();
+            //card->removeAllChildren();
+            ////
+            card->setRotationSkewY(180);
+            card->getChildren().front()->setRotationSkewY(180);
+            
+            card->runAction(Sequence::create(RotateBy::create(0.1,0,90)
+                                             ,CallFunc::create([card](){card->removeAllChildren();})
+                                             ,RotateBy::create(0.1,0,90)
+                                             ,NULL));
+            ////
             
             return true;
         }

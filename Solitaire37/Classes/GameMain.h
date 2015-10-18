@@ -28,7 +28,8 @@ protected:
         BOARDS,
         MOVE,
         COVER,
-        MENU
+        MENU,
+        HELP
     };
     
     enum class GameState{
@@ -71,6 +72,7 @@ protected:
     void createLabel();//ラベルを作成
     void createMenu();//メニューを作成
     void createMenuButton();//メニューボタンを作成
+    void createHelp();//ヘルプを作成
     
     void shuffleCards();//カードをシャッフル
     

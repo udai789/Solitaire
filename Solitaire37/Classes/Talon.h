@@ -31,6 +31,13 @@ protected:
     CC_SYNTHESIZE_RETAIN(Sprite*,_talonCardSprite,TalonCardSprite);//山札を表すカード
     CC_SYNTHESIZE_RETAIN(Sprite*,_talonCardFrame,TalonCardFrame);//枠
     
+    void moveTalonToPull();//山札から置き札にカードを移す
+    bool movePullToTalon();//置き札から山札にカードを移す @return true:置き札から山札にカードを移した
+    
+    void createTalonCardSprite();//山札を表すカードを作成する
+    
+    void stopCardsActions();//カードのアクションを停止し、カードを定位置に置く
+    
 public:
     
     CC_SYNTHESIZE_READONLY(int,_pullCount,PullCount);//山札から引くカードの枚数 初期設定3
@@ -41,8 +48,6 @@ public:
     //@return 山札レイヤー
     static Talon* createWithCardsAPullCount(Vector<Card*>& cards,int pullCount);
     
-    void moveTalonToPull();//山札から置き札にカードを移す
-    bool movePullToTalon();//置き札から山札にカードを移す @return true:置き札から山札にカードを移した
     
     //山札をクリックしたか
     //@param position クリックした位置
@@ -61,8 +66,6 @@ public:
     //@return 表示の一番上のカード(このカード以外をタッチした場合はempty)
     Vector<Card*> dragCards(const Vec2& position) override;
     void cancelCards(Vector<Card*>& cards) override;//ドロップをキャンセル
-    
-    void createTalonCardSprite();//山札を表すカードを作成する
 };
 
 #endif /* defined(__Solitaire__Talon__) */
