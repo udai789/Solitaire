@@ -587,6 +587,7 @@ void GameMain::resetGame()
 {
     this->unscheduleUpdate();
     this->unschedule(DRAG_SCHEDULE);
+    
     if(_endLayer){
         _endLayer->removeFromParent();
         setEndLayer(nullptr);

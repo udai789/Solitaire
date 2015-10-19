@@ -24,6 +24,17 @@ BoardCard::BoardTalon::BoardTalon()
 BoardCard::BoardTalon::~BoardTalon()
 {
     CC_SAFE_RELEASE_NULL(_cardFrame);
+    for(auto card:_closeCards){
+        card->removeAllChildren();//裏面のカードを取り除く
+    }
+    for(auto card:_openCards){
+        //pause中はgetNumberOfRunningActionsから数値が取得できないため、角度がついているとアクション中と判定
+        if(card->getRotationSkewY()!=0){//アクション中のカードを停止する
+            card->stopAllActions();
+            card->removeAllChildren();
+            card->setRotationSkewY(0);
+        }
+    }
 }
 
 BoardCard::BoardTalon* BoardCard::BoardTalon::createWithCards(Vector<Card *> &cards)

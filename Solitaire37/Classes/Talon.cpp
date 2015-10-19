@@ -28,6 +28,12 @@ Talon::~Talon()
 {
     CC_SAFE_RELEASE_NULL(_talonCardSprite);
     CC_SAFE_RELEASE_NULL(_talonCardFrame);
+    for(auto card:_talonCards){
+        card->setVisible(true);//非表示にしていたものを表示する
+    }
+    for(auto card:_pullCards){
+        card->stopAllActions();
+    }
 }
 
 Talon* Talon::createWithCardsAPullCount(Vector<Card *> &cards,int pullCount)
